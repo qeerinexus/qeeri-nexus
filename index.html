@@ -62,6 +62,258 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
 .legend-chip.off{opacity:.3;filter:grayscale(1);}
 #boardTooltip{position:absolute;pointer-events:none;z-index:50;transition:opacity .1s;box-shadow:0 6px 20px rgba(16,42,66,.18);}
 </style>
+
+<!-- ============================================================
+     PUBLIC DISPLAY MODE
+     One "Display" button turns QATRA into a self-running kiosk: dark
+     full-screen stage, the 3D board as the centrepiece, a guided
+     walk-through that drives the real model, a live balance rail and a
+     QR card. Escape or × restores the visitor's own session.
+     Additive — nothing above this point is modified.
+     Selectors use two classes so they outrank Tailwind's single-class
+     utilities regardless of injection order.
+     ============================================================ -->
+<style id="publicDisplayStyles">
+
+/* ---------- header button (normal page) ---------- */
+.display-trigger{
+  margin-left:auto;
+  color:var(--teal2); background:#E2F4F1;
+  border:1px solid #9AD4CD;
+}
+.display-trigger:hover{ background:#CFEDE8; border-color:var(--teal); }
+.display-trigger:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+.display-trigger[aria-pressed="true"]{ background:var(--teal); color:#fff; border-color:var(--teal); }
+
+/* ---------- hidden until display mode ---------- */
+.display-hud, .display-rail{ display:none; }
+
+/* ============ DISPLAY MODE ============ */
+.display-mode{
+  background:#061A22 !important;
+  color:#EAF7F5;
+  overflow:hidden;
+}
+
+/* slim fixed header */
+.display-mode header{
+  position:fixed !important; top:0; left:0; right:0; z-index:60;
+  background:linear-gradient(90deg,#06222C,#0A3540) !important;
+  border-bottom:2px solid var(--teal) !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.4) !important;
+}
+.display-mode header > div:first-child{ max-width:none; padding:9px 24px; }
+.display-mode header h1{ font-size:19px; color:#EAF7F5; }
+.display-mode header p, .display-mode header span{ color:#9FC4C6; }
+.display-mode header nav{ display:none; }
+.display-mode .display-trigger{
+  display:block; position:fixed; top:11px; right:24px; z-index:70;
+  margin:0; background:rgba(255,255,255,.1); color:#EAF7F5; border-color:rgba(31,224,200,.5);
+}
+.display-mode .display-trigger:hover{ background:rgba(255,255,255,.2); }
+
+/* the stage sits between the fixed HUD (left) and the balance rail (right).
+   --dispTop is measured from the real header at runtime — the web fonts
+   land late and re-flow it, so a hard-coded offset drifts on a cold load. */
+.display-mode main{
+  position:fixed; inset:var(--dispTop,64px) 0 0; max-width:none; margin:0;
+  padding:18px clamp(250px,19.5vw,304px) 18px clamp(320px,24.5vw,396px);
+  overflow:hidden;
+}
+.display-mode .view.active{ height:100%; animation:none; }
+
+/* --- network view: the board becomes the centrepiece --- */
+.display-mode #view-network > .grid{ display:block !important; height:100%; }
+.display-mode #view-network > .grid > aside{ display:none !important; }
+.display-mode #view-network > .grid > section{
+  height:100%; display:flex; flex-direction:column; margin:0;
+}
+/* the board is tilted ~52°, so its painted height is only ~62% of the element.
+   Oversize it and clip, otherwise the map floats in a sea of dead space. */
+.display-mode .board-outer{
+  flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.display-mode .board-3d{ height:142%; width:auto; aspect-ratio:100/162; }
+
+/* an unattended screen carries no "hover for details" instructions */
+.display-mode .src-note{ display:none; }
+.display-mode #view-method .src-note,
+.display-mode .display-tour p{ display:block; }
+.display-mode #view-network > .grid > section > div:first-child{ display:block; }
+/* the landmass stays light, so the original light label pills read best on it */
+.display-mode .node-label{ font-size:9.5px; }
+
+/* --- crisis view --- */
+.display-mode #view-crisis{ height:100%; overflow:auto; }
+.display-mode #view-crisis > .grid > div:first-child{ display:none; }
+.display-mode #view-crisis > .grid{ display:block !important; }
+/* the risk-matrix step shows the matrix alone rather than a scrolled page */
+.display-mode.stage-risk #view-crisis > .grid{ display:none !important; }
+.display-mode #heatmap{ height:min(52vh,460px) !important; border-radius:12px; overflow:hidden; }
+
+/* --- policy view --- */
+.display-mode #view-policy{ height:100%; overflow:auto; }
+
+/* Much of the app colours text through these variables in inline styles, which
+   no external rule can outrank — so redefine the variables themselves. The
+   light map board and the heatmap keep their own palettes. */
+.display-mode{
+  --ink:#EAF7F5; --dim:#9FC4C6; --sand:#E8C77A;
+  --teal:#3FD8C4; --teal2:#7FE8DC; --gw:#6ED694; --tse:#B79BF0;
+  --res:#E0B155; --amber:#E8C77A; --red:#FF9A9A; --maroon:#F79BB8;
+}
+/* the rest is hard-coded hex in the page's own JS, so it needs !important.
+   Per-pillar hues are brightened rather than flattened, keeping the coding. */
+.display-mode #qnv-pillars > div:nth-child(1) p:first-child{ color:#3FD8C4 !important; }
+.display-mode #qnv-pillars > div:nth-child(2) p:first-child{ color:#6ED694 !important; }
+.display-mode #qnv-pillars > div:nth-child(3) p:first-child{ color:#E8C77A !important; }
+.display-mode #qnv-pillars > div:nth-child(4) p:first-child{ color:#F79BB8 !important; }
+.display-mode #qnv-pillars p + p{ color:#C4DEDC !important; }
+.display-mode #nds3-targets p:nth-child(2){ color:#E8C77A !important; }
+.display-mode #nds3-targets p:nth-child(3){ color:#B9D4D2 !important; }
+.display-mode #targets-table td{ color:#DCEFEE !important; }
+.display-mode #targets-table td:nth-child(3){ color:#E8C77A !important; }
+.display-mode #targets-table td:nth-child(4){ color:#9FC4C6 !important; }
+.display-mode table.mth th{ color:#9FC4C6 !important; }
+
+/* dark skin for the app's own surfaces */
+.display-mode .card,
+.display-mode .card-hi{
+  background:rgba(255,255,255,.055) !important;
+  border-color:rgba(31,224,200,.22) !important;
+  box-shadow:none !important;
+  color:#EAF7F5;
+}
+.display-mode .section-title{ color:#E8C77A; }
+.display-mode .src-note{ color:#93B4B8; }
+.display-mode .eq{ background:rgba(0,0,0,.3); border-color:rgba(31,224,200,.28); color:#7FE8DC; }
+.display-mode h2{ color:#EAF7F5; }
+.display-mode table.mth td, .display-mode table.mth th{ border-bottom-color:rgba(31,224,200,.18); color:#DCEFEE; }
+.display-mode .board-ground svg{ filter:drop-shadow(0 26px 40px rgba(0,0,0,.55)); }
+
+/* panels that don't belong on an unattended screen */
+.display-mode #view-method{ display:none !important; }
+
+/* ---------- HUD: title block + walk-through + QR (fixed left) ---------- */
+.display-mode .display-hud{
+  display:flex; flex-direction:column; gap:13px;
+  position:fixed; z-index:40; left:24px;
+  top:calc(var(--dispTop,64px) + 20px); bottom:20px;
+  width:clamp(286px,22.5vw,356px); pointer-events:none;
+}
+.display-titleblock{
+  padding:15px 17px 16px;
+  background:linear-gradient(140deg,rgba(10,53,64,.95),rgba(6,26,34,.9));
+  border:1px solid rgba(31,224,200,.32);
+  border-left:4px solid var(--teal);
+  border-radius:16px;
+  box-shadow:0 18px 48px rgba(0,0,0,.45);
+  backdrop-filter:blur(12px);
+  flex:0 0 auto;
+}
+.display-kicker{
+  font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:#7FE8DC; margin-bottom:7px;
+}
+.display-titleblock h2{
+  font-size:clamp(21px,1.95vw,29px); line-height:1.08; font-weight:800;
+  letter-spacing:-.02em; color:#FFFFFF; margin:0;
+}
+.display-titleblock p{ margin:9px 0 0; font-size:12.5px; line-height:1.5; color:#C4DEDC; }
+
+.display-tour{
+  display:flex; flex-direction:column;
+  padding:14px 16px 15px;
+  background:linear-gradient(140deg,rgba(122,20,54,.9),rgba(52,8,24,.9));
+  border:1px solid rgba(232,199,122,.42);
+  border-left:4px solid #E8C77A;
+  border-radius:16px;
+  box-shadow:0 18px 48px rgba(0,0,0,.45);
+  backdrop-filter:blur(12px);
+  pointer-events:auto; flex:0 0 auto;
+}
+.display-tour .tour-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.display-tour .display-kicker{ color:#F0CF93; }
+.display-tour h3{ font-size:16px; font-weight:700; line-height:1.22; color:#FFFFFF; margin:0; }
+.display-tour p{ margin:8px 0 0; font-size:12px; line-height:1.5; color:#F0DCDF; }
+.tour-close{
+  flex:0 0 auto; width:25px; height:25px; line-height:1; cursor:pointer; font-size:16px;
+  color:#F0DCDF; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.3); border-radius:7px;
+}
+.tour-close:hover{ background:rgba(0,0,0,.55); color:#fff; }
+.tour-progress{ height:3px; margin-top:11px; background:rgba(0,0,0,.38); border-radius:2px; overflow:hidden; }
+.tour-progress i{ display:block; height:100%; background:#E8C77A; width:0%; transition:width .5s linear; }
+.tour-meta{
+  margin-top:8px; display:flex; justify-content:space-between;
+  font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.06em; color:#F0CF93;
+}
+.tour-meta button{
+  background:none; border:0; padding:0; cursor:pointer; text-decoration:underline;
+  font-family:inherit; font-size:9.5px; letter-spacing:.06em; color:#F0CF93;
+}
+.tour-meta button:hover{ color:#fff; }
+
+.display-qr{
+  margin-top:auto; display:flex; align-items:center; gap:13px; padding:13px 14px;
+  background:linear-gradient(140deg,rgba(6,26,34,.96),rgba(10,53,64,.92));
+  border:1px solid rgba(31,224,200,.32);
+  border-left:4px solid var(--teal);
+  border-radius:16px;
+  box-shadow:0 18px 48px rgba(0,0,0,.45);
+  backdrop-filter:blur(12px);
+  pointer-events:auto; flex:0 0 auto;
+}
+.display-qr-link{ display:block; flex:0 0 auto; }
+.display-qr img{ width:84px; height:84px; background:#fff; border-radius:8px; padding:5px; object-fit:contain; display:block; }
+.display-qr-copy{ min-width:0; flex:1 1 auto; }
+.display-qr strong{ display:block; font-size:14.5px; font-weight:700; color:#FFFFFF; line-height:1.2; }
+.display-qr span{ display:block; font-size:11px; color:#9FC4C6; line-height:1.4; margin-top:4px; }
+.display-qr-url{
+  display:block; font-family:'JetBrains Mono',monospace; font-size:9px; line-height:1.35;
+  color:#7FE8DC; margin-top:5px; overflow-wrap:anywhere;
+}
+
+/* ---------- live balance rail (fixed right) ---------- */
+.display-mode .display-rail{
+  display:flex; flex-direction:column;
+  position:fixed; z-index:40; right:24px;
+  top:calc(var(--dispTop,64px) + 20px); bottom:20px;
+  width:clamp(222px,17.5vw,272px); overflow:auto;
+  padding:14px 14px 15px;
+  background:rgba(6,26,34,.9);
+  border:1px solid rgba(31,224,200,.28);
+  border-radius:16px;
+  box-shadow:0 18px 48px rgba(0,0,0,.45);
+  backdrop-filter:blur(12px);
+}
+.display-rail .railhead{
+  font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em;
+  text-transform:uppercase; color:#9FC4C6; margin-bottom:10px;
+}
+.rail-balance{
+  padding:12px 13px; margin-bottom:13px; border-radius:12px;
+  background:rgba(31,224,200,.1); border:1px solid rgba(31,224,200,.3);
+}
+.rail-balance .rb-lbl{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#9FC4C6; }
+.rail-balance .rb-val{ font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:700; margin-top:5px; line-height:1.1; }
+.rail-metrics{ display:grid; gap:8px; }
+.rail-metric{ padding:9px 12px; border-radius:11px; background:rgba(255,255,255,.055); border:1px solid rgba(31,224,200,.2); }
+.rail-metric .rm-lbl{ font-size:10px; color:#9FC4C6; }
+.rail-metric .rm-val{ font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:#EAF7F5; margin-top:2px; }
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .display-mode .display-rail{ display:none; }
+  .display-mode .display-hud{ left:16px; width:clamp(266px,24vw,304px); }
+  .display-mode main{ padding-left:clamp(294px,27vw,336px); padding-right:16px; }
+}
+@media (max-width:860px){
+  .display-mode main{ padding:12px 12px 196px; }
+  .display-mode .display-hud{ left:12px; right:12px; top:auto; bottom:14px; width:auto; }
+  .display-mode .display-titleblock, .display-mode .display-qr{ display:none; }
+  .display-mode header h1{ font-size:16px; }
+}
+</style>
 </head>
 <body>
 
@@ -98,6 +350,8 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
     <button class="tab-btn btn text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full" data-view="crisis">Crisis &amp; Alternatives</button>
     <button class="tab-btn btn text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full" data-view="policy">Policy Alignment</button>
     <button class="tab-btn btn text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full" data-view="method">Equations &amp; Sources</button>
+    <button id="btnDisplay" type="button" aria-pressed="false" aria-label="Start display"
+            class="display-trigger btn text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full shrink-0">Display</button>
   </nav>
 </header>
 
@@ -946,6 +1200,348 @@ document.addEventListener('DOMContentLoaded', ()=>{
   drawHeatmap();
 });
 window.addEventListener('resize', ()=>{ buildNodesFiltered(); if(document.getElementById('view-crisis').classList.contains('active')) drawHeatmap(); });
+</script>
+
+<!-- ============================================================
+     PUBLIC DISPLAY MODE — markup + controller (additive)
+     ============================================================ -->
+<div id="displayHud" class="display-hud" aria-hidden="true">
+  <div class="display-titleblock">
+    <div class="display-kicker">Qatar Water Resilience Network</div>
+    <h2>QATRA NEXUS</h2>
+    <p>A live supply–demand model of Qatar's water system — desalination, groundwater, reuse and strategic
+       storage, under crisis and against national 2030 targets.</p>
+  </div>
+
+  <aside id="displayTour" class="display-tour" role="region" aria-labelledby="tourTitle" aria-live="polite">
+    <div class="tour-top">
+      <div>
+        <div class="display-kicker">Guided walk-through</div>
+        <h3 id="tourTitle">Network overview</h3>
+      </div>
+      <button class="tour-close" id="tourClose" type="button" aria-label="Exit display">×</button>
+    </div>
+    <p id="tourText"></p>
+    <div class="tour-progress" aria-hidden="true"><i id="tourProgress"></i></div>
+    <div class="tour-meta">
+      <span id="tourCount">1 / 10</span>
+      <button id="tourPause" type="button">Pause</button>
+    </div>
+  </aside>
+
+  <div class="display-qr" role="group" aria-label="Access this model">
+    <a id="displayQrLink" class="display-qr-link" href="#" target="_blank" rel="noopener">
+      <img id="displayQrImage" width="84" height="84" alt="QR code linking to QATRA NEXUS">
+    </a>
+    <div class="display-qr-copy">
+      <strong>Open the model</strong>
+      <span>Explore the network yourself</span>
+      <span class="display-qr-url" id="displayQrUrl"></span>
+    </div>
+  </div>
+</div>
+
+<aside id="displayRail" class="display-rail" aria-hidden="true">
+  <div class="railhead">Live water balance</div>
+  <div class="rail-balance">
+    <div class="rb-lbl">Q<sub>supply</sub> − Q<sub>demand</sub></div>
+    <div class="rb-val" id="railBalance">–</div>
+  </div>
+  <div class="railhead">National totals</div>
+  <div class="rail-metrics" id="railMetrics"></div>
+</aside>
+
+<script>
+/* ============================================================
+   PUBLIC DISPLAY MODE
+   Same control as GH Builder's "Display": a kiosk skin plus a guided
+   walk-through that drives the real model, restoring the visitor's own
+   session on exit. Self-contained IIFE — it reads the existing model
+   (supplyAssets, demandMultiplier, renderAll, …) but changes none of it.
+   ============================================================ */
+(()=>{
+  const $ = id => document.getElementById(id);
+  const body = document.body;
+  const btn = $('btnDisplay'), hud = $('displayHud'), rail = $('displayRail');
+  if(!btn) return;
+
+  /* ---------- measure the fixed header ----------
+     Inter and JetBrains Mono load with display:swap, so the header
+     re-flows after first paint. Measuring once works only where the
+     fonts are already cached, so observe it for the whole session. */
+  const headEl = document.querySelector('header');
+  const measureChrome = ()=>{
+    if(!body.classList.contains('display-mode')) return;
+    if(headEl) body.style.setProperty('--dispTop', headEl.offsetHeight + 'px');
+  };
+  let queued = false;
+  const queueMeasure = ()=>{
+    if(queued) return;
+    queued = true;
+    requestAnimationFrame(()=>{ queued = false; measureChrome(); relayout(); });
+  };
+  window.addEventListener('resize', queueMeasure);
+  if(window.ResizeObserver && headEl) new ResizeObserver(queueMeasure).observe(headEl);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(queueMeasure).catch(()=>{});
+
+  /* The heatmap draws its text in dark slate for the light page. On the dark
+     stage that vanishes, so give the plot a light paper instead of recolouring
+     every label — the 3D map board is light too, so data surfaces stay light
+     and only the chrome goes dark. drawHeatmap() re-runs on each tab switch,
+     so this is re-applied rather than set once. */
+  const themeHeatmap = ()=>{
+    try{
+      if(!window.Plotly || !$('heatmap') || !$('heatmap').data) return;
+      Plotly.relayout('heatmap', body.classList.contains('display-mode')
+        ? { paper_bgcolor:'#F4F9FC' }
+        : { paper_bgcolor:'rgba(0,0,0,0)' });
+    }catch(e){}
+  };
+  /* the board and the Plotly heatmap both need telling when their box changes */
+  const relayout = ()=>{
+    try{ refreshBoard(); }catch(e){}
+    try{
+      if(window.Plotly && $('heatmap') && $('view-crisis').classList.contains('active')) Plotly.Plots.resize('heatmap');
+    }catch(e){}
+    themeHeatmap();
+  };
+  if(window.ResizeObserver){
+    const boardBox = document.querySelector('.board-outer');
+    if(boardBox) new ResizeObserver(()=>{ try{ refreshBoard(); }catch(e){} }).observe(boardBox);
+    const heatBox = $('heatmap');
+    if(heatBox) new ResizeObserver(()=>{
+      try{ if(window.Plotly && $('view-crisis').classList.contains('active')) Plotly.Plots.resize('heatmap'); }catch(e){}
+    }).observe(heatBox);
+  }
+
+  /* ---------- QR ----------
+     Defaults to wherever the page is actually served from, so a deployed
+     copy always points at itself. Set window.QATRA_PUBLIC_URL or
+     <meta name="qatra-public-url" content="..."> to pin a canonical address. */
+  const qrTarget = ()=>{
+    const meta = document.querySelector('meta[name="qatra-public-url"]');
+    const configured = window.QATRA_PUBLIC_URL || (meta && meta.content);
+    return (configured || window.location.href).split('#')[0];
+  };
+  const updateQR = ()=>{
+    const img = $('displayQrImage'), link = $('displayQrLink'), urlEl = $('displayQrUrl');
+    const target = qrTarget();
+    if(link) link.href = target;
+    if(urlEl) urlEl.textContent = target.replace(/^https?:\/\//,'');
+    if(!img) return;
+    img.onerror = ()=>{ img.style.display='none'; img.alt='QR code unavailable'; };
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=' + encodeURIComponent(target);
+  };
+
+  /* ---------- helpers that drive the real model ---------- */
+  const goView = name =>{
+    const tab = document.querySelector('.tab-btn[data-view="'+name+'"]');
+    if(tab) tab.click();
+  };
+  const setDemand = pct =>{
+    const s = $('demandSlider');
+    s.value = pct;
+    s.dispatchEvent(new Event('input', {bubbles:true}));
+  };
+  const resetAll = ()=>{
+    stopSweep();
+    supplyAssets.forEach(a=>a.status='on');
+    reservoirSites.forEach(r=>r.current=r.capacity);
+    alternatives.forEach(a=>activeAlts[a.id]=false);
+    setDemand(100);
+    renderAll();
+  };
+  const setCat = (cat, status)=>{
+    supplyAssets.filter(a=>a.cat===cat).forEach(a=>a.status=status);
+    renderAll();
+  };
+  /* `orbiting` is the app's own flag — read it rather than sniffing button text */
+  const orbit = on =>{
+    const b = $('btnOrbit');
+    if(b && !!on !== !!orbiting) b.click();
+  };
+
+  /* value sweep, so a number visibly moves on a public screen */
+  let sweepTimer = null;
+  const stopSweep = ()=>{ if(sweepTimer){ clearInterval(sweepTimer); sweepTimer=null; } };
+  const sweepDemand = (from, to, duration=4200)=>{
+    stopSweep();
+    setDemand(from);
+    const steps = Math.max(1, Math.round(Math.abs(to-from)/2));
+    const stepMs = Math.max(110, Math.round(duration/steps));
+    let i = 0;
+    sweepTimer = setInterval(()=>{
+      i++;
+      const f = Math.min(1, i/steps);
+      setDemand(Math.round(from + (to-from)*f));
+      if(f>=1) stopSweep();
+    }, stepMs);
+  };
+
+  /* ---------- the walk-through ---------- */
+  const steps = [
+    { view:'network', title:'The national water network',
+      text:'Every desalination plant, well field, reuse works and strategic reservoir in one model — tower height is active capacity, line thickness is flow, dot colour is the end-use sector.',
+      apply:()=>{ resetAll(); orbit(true); } },
+
+    { view:'network', title:'Supply meets demand',
+      text:'Qatar runs roughly a 35% reserve margin over average national demand. The balance below updates as every element of the network changes.',
+      apply:()=>{ resetAll(); orbit(true); } },
+
+    { view:'network', title:'An extreme-heat demand surge',
+      text:'Summer peaks push national demand up sharply. Watch the balance narrow and storage autonomy fall as demand climbs to 125% of baseline.',
+      apply:()=>{ resetAll(); orbit(true); sweepDemand(100,125); } },
+
+    { view:'network', title:'Conservation as a supply source',
+      text:'Tarsheed-style demand reduction toward the NDS-3 target of under 310 L per person per day buys the same headroom as new capacity — at a fraction of the energy and cost.',
+      apply:()=>{ resetAll(); orbit(true); sweepDemand(100,78); } },
+
+    { view:'network', title:'Cutting groundwater extraction',
+      text:'NDS-3 commits to a 70% cut in groundwater extraction by 2030. Taking the well fields offline shows how much that shifts onto desalination and reuse.',
+      apply:()=>{ resetAll(); orbit(true); setCat('gw','off'); } },
+
+    /* A single plant failure is absorbed by Qatar's ~35% reserve margin — no
+       deficit appears. Compounding a grid outage with a heat surge is what
+       actually pushes demand past supply, which is the point worth showing. */
+    { view:'crisis', title:'Compound stress on the network',
+      text:'A grid outage takes two desalination plants to half output while an extreme-heat wave lifts demand 18%. Neither alone would breach the reserve margin — together they open a real deficit.',
+      apply:()=>{ resetAll(); fireCrisis('power'); fireCrisis('heat'); } },
+
+    { view:'crisis', title:'Closing the gap',
+      text:'Tiered cutbacks, plant optimisation and mobile RO together cover the shortfall. Time to balance is set by the slowest option engaged, not the fastest — options are ranked by cost-effectiveness, not size.',
+      apply:()=>{
+        resetAll(); fireCrisis('power'); fireCrisis('heat');
+        ['tieredCutbacks','optimizeExisting','mobileRO'].forEach(id=>{ activeAlts[id]=true; });
+        renderAltList();
+      } },
+
+    { view:'crisis', title:'Where the risks sit',
+      text:'Frequency against amplitude for each failure mode, sized by the share of national demand exposed. Rare, high-amplitude events are what the storage strategy is built for.',
+      apply:()=>{ resetAll(); }, scroll:'bottom' },
+
+    { view:'policy', title:'The national commitments',
+      text:'Water security sits inside the Environmental Development pillar of QNV 2030, with NDS-3 setting the measurable targets and the 2021 NDC tying water decisions to emissions.',
+      apply:()=>{ resetAll(); } },
+
+    { view:'policy', title:'Where Qatar stands today',
+      text:'Current state against each 2030 target — per-capita use, groundwater extraction, reuse, storage coverage and desalination capacity, with the source behind every figure.',
+      apply:()=>{ resetAll(); } }
+  ];
+
+  const STEP_MS = 7000;
+  let session = null, index = 0, timer = null, playing = false;
+
+  const showStep = ()=>{
+    const s = steps[index];
+    stopSweep();
+    goView(s.view);
+    s.apply();
+    $('tourTitle').textContent = s.title;
+    $('tourText').textContent  = s.text;
+    $('tourProgress').style.width = ((index+1)/steps.length*100) + '%';
+    $('tourCount').textContent = (index+1) + ' / ' + steps.length;
+    /* some cards sit below the fold of a tall view — bring them into shot */
+    body.classList.toggle('stage-risk', s.scroll==='bottom');
+    const pane = document.querySelector('.view.active');
+    if(pane) pane.scrollTo({ top:0, behavior:'auto' });
+    requestAnimationFrame(relayout);
+    setTimeout(relayout, 140);   /* lands after the app's own 50ms tab redraw */
+    syncRail();
+  };
+  const setPlaying = on =>{
+    playing = !!on;
+    if(timer){ clearInterval(timer); timer = null; }
+    if(playing) timer = setInterval(()=>{
+      if(!session) return;
+      index = index >= steps.length-1 ? 0 : index+1;
+      showStep();
+    }, STEP_MS);
+    $('tourPause').textContent = playing ? 'Pause' : 'Resume';
+  };
+
+  /* ---------- live balance rail, mirrored from the app's own readouts ---------- */
+  const RAIL_ROWS = [
+    ['Supply',            'tickerSupply'],
+    ['Demand',            'tickerDemand'],
+    ['Storage autonomy',  'valDays'],
+    ['Unmet demand',      'valUnmet'],
+    ['Power draw',        'valPower'],
+    ['CO₂ per day',  'valCO2']
+  ];
+  const syncRail = ()=>{
+    if(!body.classList.contains('display-mode')) return;
+    const bal = $('tickerBalance');
+    $('railBalance').textContent = bal.textContent;
+    $('railBalance').style.color = bal.style.color || '#EAF7F5';
+    $('railMetrics').innerHTML = RAIL_ROWS.map(([label,id])=>{
+      const n = $(id);
+      return n ? '<div class="rail-metric"><div class="rm-lbl">' + label + '</div>'
+               + '<div class="rm-val">' + n.textContent + '</div></div>' : '';
+    }).join('');
+  };
+  /* stays true even if a visitor grabs a control mid-display */
+  new MutationObserver(syncRail).observe($('tickerBalance'), {childList:true, characterData:true, subtree:true});
+
+  /* ---------- start / stop ---------- */
+  const start = ()=>{
+    if(session) return;
+    session = {
+      status: supplyAssets.map(a=>a.status),
+      demand: $('demandSlider').value,
+      alts: {...activeAlts},
+      view: (document.querySelector('.tab-btn.active')||{}).dataset ? document.querySelector('.tab-btn.active').dataset.view : 'network',
+      scrollY: window.scrollY
+    };
+    body.classList.add('display-mode');
+    hud.setAttribute('aria-hidden','false');
+    rail.setAttribute('aria-hidden','false');
+    btn.textContent = 'Exit display';
+    btn.setAttribute('aria-pressed','true');
+    btn.setAttribute('aria-label','Exit display');
+    window.scrollTo(0,0);
+    measureChrome();
+    updateQR();
+    index = 0;
+    showStep();
+    setPlaying(true);
+  };
+
+  const stop = ()=>{
+    if(timer){ clearInterval(timer); timer = null; }
+    playing = false;
+    stopSweep();
+    orbit(false);
+    body.classList.remove('display-mode','stage-risk');
+    hud.setAttribute('aria-hidden','true');
+    rail.setAttribute('aria-hidden','true');
+    btn.textContent = 'Display';
+    btn.setAttribute('aria-pressed','false');
+    btn.setAttribute('aria-label','Start display');
+    if(session){
+      supplyAssets.forEach((a,i)=>{ a.status = session.status[i]; });
+      Object.assign(activeAlts, session.alts);
+      setDemand(session.demand);
+      goView(session.view);
+      renderAll();
+      window.scrollTo(0, session.scrollY);
+      session = null;
+    }
+    requestAnimationFrame(relayout);
+  };
+
+  btn.addEventListener('click', ()=> session ? stop() : start());
+  $('tourClose').addEventListener('click', stop);
+  $('tourPause').addEventListener('click', ()=> setPlaying(!playing));
+  document.addEventListener('keydown', e=>{
+    if(!session) return;
+    if(e.key === 'Escape'){ stop(); }
+    else if(e.key === 'ArrowRight'){ setPlaying(false); index = index >= steps.length-1 ? 0 : index+1; showStep(); }
+    else if(e.key === 'ArrowLeft'){ setPlaying(false); index = index <= 0 ? steps.length-1 : index-1; showStep(); }
+    else if(e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  });
+  /* a click on the stage pauses, so a visitor can take over */
+  document.querySelector('main').addEventListener('pointerdown', ()=>{ if(session && playing) setPlaying(false); });
+})();
 </script>
 </body>
 </html>
