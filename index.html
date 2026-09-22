@@ -9,80 +9,86 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.32.0/plotly.min.js"></script>
 <style>
 :root{
-  --maroon:#9B1B45; --maroon2:#6E1030; --teal:#12B5AC; --teal2:#0A6E68; --gw:#3FBF6B; --tse:#9B6BFF;
-  --res:#E0A030; --amber:#F0A93B; --red:#E14B4B; --ink:#EAF1F5; --dim:#8FA3B0; --line:#22323D;
-  --bg0:#060B10; --bg1:#0B141C; --card:#101B24; --cardHi:#14222D;
+  /* brand accents — darkened from the original dark theme so they clear
+     WCAG AA (>=4.5:1) as text on the light blue page and on white cards */
+  --maroon:#9B1B45; --maroon2:#6E1030; --teal:#0A7C76; --teal2:#0A6E68; --gw:#197A3E; --tse:#7343D6;
+  --res:#8F6209; --amber:#9A6309; --red:#C62F2F; --sand:#8A6A1F;
+  /* surfaces & text */
+  --ink:#0E1C26; --dim:#51677A; --line:#C3D6E4; --lineHi:#D3E3EE;
+  --bg0:#EAF4FB; --bg1:#DCEAF6; --card:#FFFFFF; --cardHi:#F3F8FC; --track:#DDE8F1;
+  /* map board */
+  --land1:#F0E6D2; --land2:#DDCDAF; --grat:#A8BCC9; --gratText:#7A8E9C;
 }
 *{box-sizing:border-box;}
 html{scroll-padding-top:env(safe-area-inset-top,0px);}
-body{font-family:'Inter',sans-serif;background:radial-gradient(ellipse at 30% -10%,#122531 0%,var(--bg0) 55%);color:var(--ink);
+body{font-family:'Inter',sans-serif;background:radial-gradient(ellipse at 30% -10%,#FBFDFF 0%,var(--bg0) 55%);color:var(--ink);
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);min-height:100%;}
 .mono{font-family:'JetBrains Mono',monospace;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;}
-.card-hi{background:var(--cardHi);border:1px solid #2C4150;border-radius:14px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(16,42,66,.05),0 4px 14px rgba(16,42,66,.05);}
+.card-hi{background:var(--cardHi);border:1px solid var(--lineHi);border-radius:14px;}
 .btn{transition:all .15s ease;} .btn:active{transform:scale(.96);}
 .pill{border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;}
 .tab-btn{color:var(--dim);} .tab-btn.active{background:var(--maroon);color:#fff;}
-::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:#233440;border-radius:8px;}
+::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:#B8CEDD;border-radius:8px;}
 .view{display:none;} .view.active{display:block;animation:fadeIn .25s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.src-note{font-size:11px;line-height:1.5;color:#6E828D;}
-.section-title{font-size:.95rem;font-weight:700;color:#F4D9A8;letter-spacing:.02em;}
+.src-note{font-size:11px;line-height:1.5;color:#5A7183;}
+.section-title{font-size:.95rem;font-weight:700;color:var(--sand);letter-spacing:.02em;}
 input[type=range]{accent-color:var(--teal);}
 table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);font-size:12.5px;text-align:left;}
-.eq{background:#0A141B;border:1px solid #1E2E38;border-radius:10px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#B9E7E2;overflow-x:auto;}
+.eq{background:#F1F7FB;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#0A5E59;overflow-x:auto;}
 .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px;}
 .frac>span{display:block;padding:0 4px;}
-.frac>span:first-child{border-bottom:1px solid #B9E7E2;}
+.frac>span:first-child{border-bottom:1px solid #0A5E59;}
 
 /* ---- 3D BOARD ---- */
 .board-outer{perspective:1400px;}
 .board-3d{position:relative;width:100%;aspect-ratio:100/162;transform-style:preserve-3d;transform:rotateX(var(--tilt,52deg)) rotateZ(var(--az,-2deg));transition:transform .2s ease;cursor:grab;}
 .board-3d:active{cursor:grabbing;}
 .board-ground{position:absolute;inset:0;}
-.board-ground svg{width:100%;height:100%;display:block;filter:drop-shadow(0 30px 40px rgba(0,0,0,.55));}
+.board-ground svg{width:100%;height:100%;display:block;filter:drop-shadow(0 26px 34px rgba(30,60,90,.28));}
 .node-wrap{position:absolute;transform-style:preserve-3d;}
 .node-badge{position:absolute;left:0;top:0;transform-origin:center bottom;cursor:pointer;white-space:nowrap;
   display:flex;flex-direction:column;align-items:center;transition:filter .15s ease;}
-.node-badge:hover{filter:brightness(1.3);}
-.node-dot{border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.12), 0 6px 14px rgba(0,0,0,.5);}
-.node-label{margin-top:3px;font-size:8.5px;font-weight:700;color:#EAF1F5;background:#0009;padding:1px 5px;border-radius:6px;white-space:nowrap;pointer-events:none;}
-.node-offline .node-dot{background:#3a3f45 !important;box-shadow:0 0 0 3px rgba(225,75,75,.35);animation:pulseOff 1.2s infinite;}
+.node-badge:hover{filter:brightness(.88) saturate(1.15);}
+.node-dot{border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 4px 10px rgba(20,50,75,.38);}
+.node-label{margin-top:3px;font-size:8.5px;font-weight:700;color:#12222E;background:rgba(255,255,255,.88);border:1px solid rgba(120,150,170,.35);padding:1px 5px;border-radius:6px;white-space:nowrap;pointer-events:none;}
+.node-offline .node-dot{background:#9AAAB5 !important;box-shadow:0 0 0 3px rgba(198,47,47,.4);animation:pulseOff 1.2s infinite;}
 @keyframes pulseOff{0%,100%{opacity:1;}50%{opacity:.4;}}
 .demand-city{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle,#F4D9A899 0%,transparent 70%);animation:citypulse 3s ease-in-out infinite;}
+  background:radial-gradient(circle,#C7902299 0%,transparent 70%);animation:citypulse 3s ease-in-out infinite;}
 @keyframes citypulse{0%,100%{opacity:.55;}50%{opacity:1;}}
 .legend-chip{cursor:pointer;user-select:none;}
-.legend-chip.off{opacity:.35;}
-#boardTooltip{position:absolute;pointer-events:none;z-index:50;transition:opacity .1s;}
+.legend-chip.off{opacity:.3;filter:grayscale(1);}
+#boardTooltip{position:absolute;pointer-events:none;z-index:50;transition:opacity .1s;box-shadow:0 6px 20px rgba(16,42,66,.18);}
 </style>
 </head>
 <body>
 
 <!-- ================= HEADER ================= -->
-<header class="sticky top-0 z-30" style="background:linear-gradient(90deg,#081319,#0E1E29);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);">
+<header class="sticky top-0 z-30" style="background:linear-gradient(90deg,#FFFFFF,#E4F0F9);border-bottom:1px solid var(--line);box-shadow:0 1px 3px rgba(16,42,66,.07);padding-top:env(safe-area-inset-top,0px);">
   <div class="max-w-[1400px] mx-auto px-4 py-3 flex items-center gap-4">
     <svg width="44" height="44" viewBox="0 0 64 64" class="shrink-0">
       <defs><radialGradient id="lg1" cx="35%" cy="30%"><stop offset="0%" stop-color="#1FE0C8"/><stop offset="100%" stop-color="#0A6E68"/></radialGradient></defs>
-      <circle cx="32" cy="32" r="31" fill="#0B141C" stroke="#9B1B45" stroke-width="2"/>
-      <g stroke="#F4D9A8" stroke-width="1.4" opacity=".8">
+      <circle cx="32" cy="32" r="31" fill="#FFFFFF" stroke="#9B1B45" stroke-width="2"/>
+      <g stroke="#8A6A1F" stroke-width="1.4" opacity=".8">
         <line x1="20" y1="42" x2="32" y2="24"/><line x1="32" y1="24" x2="46" y2="40"/><line x1="32" y1="24" x2="24" y2="20"/>
       </g>
       <circle cx="32" cy="24" r="5.5" fill="url(#lg1)"/>
-      <circle cx="20" cy="42" r="3.4" fill="#3FBF6B"/>
-      <circle cx="46" cy="40" r="3.4" fill="#9B6BFF"/>
-      <circle cx="24" cy="20" r="2.6" fill="#E0A030"/>
+      <circle cx="20" cy="42" r="3.4" fill="#197A3E"/>
+      <circle cx="46" cy="40" r="3.4" fill="#7343D6"/>
+      <circle cx="24" cy="20" r="2.6" fill="#8F6209"/>
     </svg>
     <div class="min-w-0">
       <div class="flex items-baseline gap-2 flex-wrap">
         <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">QATRA <span style="color:var(--teal)">NEXUS</span></h1>
-        <span class="text-[11px] sm:text-xs" style="color:#F4D9A8">Qatar Water Resilience Network</span>
+        <span class="text-[11px] sm:text-xs" style="color:#8A6A1F">Qatar Water Resilience Network</span>
       </div>
       <p class="text-[11px] sm:text-xs" style="color:var(--dim)">Unified supply–demand network, crisis response &amp; physical-equation planning model · QNV 2030 · NDS-3 · NDC 2021</p>
     </div>
     <div class="ml-auto hidden lg:flex items-center gap-4 mono text-right">
       <div><p class="text-[9px]" style="color:var(--dim)">SUPPLY</p><p id="tickerSupply" class="text-sm font-bold" style="color:var(--teal)">–</p></div>
-      <div><p class="text-[9px]" style="color:var(--dim)">DEMAND</p><p id="tickerDemand" class="text-sm font-bold" style="color:#F4D9A8">–</p></div>
+      <div><p class="text-[9px]" style="color:var(--dim)">DEMAND</p><p id="tickerDemand" class="text-sm font-bold" style="color:#8A6A1F">–</p></div>
       <div><p class="text-[9px]" style="color:var(--dim)">BALANCE</p><p id="tickerBalance" class="text-sm font-bold">–</p></div>
       <div><p class="text-[9px]" style="color:var(--dim)">STORAGE</p><p id="tickerStorage" class="text-sm font-bold" style="color:var(--res)">–</p></div>
     </div>
@@ -159,7 +165,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
         <div class="eq mb-2 text-[11.5px]">P = SEC × Q / 24</div>
         <div class="grid grid-cols-2 gap-2 text-center">
           <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">Power draw</p><p id="valPower" class="text-base font-extrabold" style="color:var(--teal)">–</p></div>
-          <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">CO₂ / day</p><p id="valCO2" class="text-base font-extrabold" style="color:#F0A93B">–</p></div>
+          <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">CO₂ / day</p><p id="valCO2" class="text-base font-extrabold" style="color:#9A6309">–</p></div>
         </div>
         <p class="src-note mt-2">Grid factor ≈0.58 kgCO₂/kWh (gas-dominated, 2025 est.). Every m³ saved is an NDC mitigation lever.</p>
       </div>
@@ -201,16 +207,16 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
 <!-- ================= POLICY VIEW ================= -->
 <section id="view-policy" class="view">
   <div class="card p-5 mb-4">
-    <h2 class="text-lg font-bold mb-1" style="color:#F4D9A8">Qatar National Vision 2030 — Four Pillars</h2>
+    <h2 class="text-lg font-bold mb-1" style="color:#8A6A1F">Qatar National Vision 2030 — Four Pillars</h2>
     <p class="text-sm mb-4" style="color:var(--dim)">Water security sits primarily within Environmental Development, with strong ties to Economic and Human development.</p>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="qnv-pillars"></div>
   </div>
   <div class="card p-5 mb-4">
-    <h2 class="text-lg font-bold mb-1" style="color:#F4D9A8">NDS-3 (2024–2030) Environmental Targets</h2>
+    <h2 class="text-lg font-bold mb-1" style="color:#8A6A1F">NDS-3 (2024–2030) Environmental Targets</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="nds3-targets"></div>
   </div>
   <div class="card p-5 mb-4">
-    <h2 class="text-lg font-bold mb-2" style="color:#F4D9A8">Qatar's NDC (2021) &amp; the Water–Energy Nexus</h2>
+    <h2 class="text-lg font-bold mb-2" style="color:#8A6A1F">Qatar's NDC (2021) &amp; the Water–Energy Nexus</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
       <ul class="space-y-2">
         <li><b>Target:</b> 25% GHG reduction by 2030 vs. 2019 BAU.</li>
@@ -223,7 +229,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
     </div>
   </div>
   <div class="card p-5 mb-6">
-    <h2 class="text-lg font-bold mb-3" style="color:#F4D9A8">Targets vs. Current State</h2>
+    <h2 class="text-lg font-bold mb-3" style="color:#8A6A1F">Targets vs. Current State</h2>
     <div class="overflow-x-auto"><table class="w-full mth"><thead><tr><th>Indicator</th><th>Current</th><th>2030 Target</th><th>Source</th></tr></thead><tbody id="targets-table"></tbody></table></div>
   </div>
 </section>
@@ -231,7 +237,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
 <!-- ================= METHOD VIEW ================= -->
 <section id="view-method" class="view">
   <div class="card p-5 mb-4">
-    <h2 class="text-lg font-bold mb-3" style="color:#F4D9A8">Governing Equations</h2>
+    <h2 class="text-lg font-bold mb-3" style="color:#8A6A1F">Governing Equations</h2>
     <div class="space-y-4 text-sm">
       <div><p class="font-semibold mb-1">1. Water mass balance</p><div class="eq">dS/dt = Q_supply(t) − Q_demand(t)</div><p class="src-note mt-1">S = strategic storage volume (m³); Q in m³/day.</p></div>
       <div><p class="font-semibold mb-1">2. Days of strategic storage autonomy</p><div class="eq">D_cov = S / Q_demand</div><p class="src-note mt-1">Matches KAHRAMAA's published definition (e.g. "5.2 days" in 2024) — how long strategic reservoirs alone could cover national demand if all active supply stopped today. Independent of the current supply/demand balance, so it never shows an undefined "∞" value.</p></div>
@@ -243,7 +249,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
     </div>
   </div>
   <div class="card p-5 mb-4">
-    <h2 class="text-lg font-bold mb-2" style="color:#F4D9A8">Methodology Notes</h2>
+    <h2 class="text-lg font-bold mb-2" style="color:#8A6A1F">Methodology Notes</h2>
     <ul class="text-sm space-y-2 list-disc pl-5">
       <li><b>National totals</b> (desal capacity, demand, storage, TSE reuse) use the latest public KAHRAMAA / Ashghal disclosures.</li>
       <li><b>Plant capacities:</b> RAF A3 = 164,000 m³/day and Umm Al Houl = 614,000 m³/day are validated project figures (ACCIONA; Qatar University, 2022). Ras Laffan and the residual fleet are indicative allocations calibrated to match the validated 538 MIGD (2024) national total.</li>
@@ -255,7 +261,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
     </ul>
   </div>
   <div class="card p-5 mb-6">
-    <h2 class="text-lg font-bold mb-3" style="color:#F4D9A8">Sources</h2>
+    <h2 class="text-lg font-bold mb-3" style="color:#8A6A1F">Sources</h2>
     <ol class="text-sm space-y-2 list-decimal pl-5">
       <li>KAHRAMAA — "Water Sector" official statistics (2024–2026): 538 MIGD desal capacity (2024), ≈540 MIGD max production (2026); ≈400 MIGD average national demand (2026, ≈35% reserve margin); 2,417 million-gallon strategic storage; ≈11,000 km distribution network (2026).</li>
       <li>KAHRAMAA — storage-coverage disclosures (X/Twitter, Mar 2025; The Peninsula): strategic reserves at 5.2 days (2024), up from 1.3 days (2010); 7-day coverage remains the Phase-1 target.</li>
@@ -344,9 +350,9 @@ const directLinks = [
   ['dohanorth_tse','daayen'],['dohasouth_tse','wakrah'],['dukhan_tse','shahaniya'],['khor_tse','khor'],
 ];
 
-const catColor = { desal:'#12B5AC', gw:'#3FBF6B', tse:'#9B6BFF', res:'#E0A030' };
+const catColor = { desal:'#0A7C76', gw:'#197A3E', tse:'#7343D6', res:'#8F6209' };
 const catLabel = { desal:'Conventional — Desalination (seawater RO/thermal)', gw:'Non-conventional — Groundwater (natural aquifer, well field)', tse:'Non-conventional — TSE Reuse (treated wastewater)', res:'Strategic Storage (mega-reservoir)' };
-const sectorColor = { domestic:'#4FC3F7', landscape:'#8BC34A', agriculture:'#C9A22B', industrial:'#E0664B' };
+const sectorColor = { domestic:'#10689E', landscape:'#4A7418', agriculture:'#7F6210', industrial:'#C0472C' };
 const sectorLabel = { domestic:'Domestic / Drinking', landscape:'Landscape & Public Irrigation', agriculture:'Agriculture', industrial:'Industrial & District Cooling' };
 
 // ---- Alternatives (crisis response options) ----
@@ -410,27 +416,27 @@ function buildGround(){
   const glow = svgEl('filter',{id:'glow'});
   glow.innerHTML = '<feGaussianBlur stdDeviation="0.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>';
   const landGrad = svgEl('radialGradient',{id:'landGrad',cx:'40%',cy:'25%'});
-  landGrad.innerHTML = '<stop offset="0%" stop-color="#16303a"/><stop offset="100%" stop-color="#0A1B22"/>';
+  landGrad.innerHTML = '<stop offset="0%" stop-color="#F0E6D2"/><stop offset="100%" stop-color="#DDCDAF"/>';
   defs.appendChild(glow); defs.appendChild(landGrad); groundSvg.appendChild(defs);
 
   // graticule (lat/lon grid) — GIS-style reference lines, every 0.25°
   const grat = svgEl('g',{id:'graticule',opacity:'0.35'});
   for(let lon=Math.ceil(GEO_BOUNDS.lonMin*4)/4; lon<=GEO_BOUNDS.lonMax; lon+=0.25){
     const a=project(GEO_BOUNDS.latMin,lon), b=project(GEO_BOUNDS.latMax,lon);
-    grat.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#274552','stroke-width':'0.08','stroke-dasharray':'0.6,0.9'}));
-    const lbl = svgEl('text',{x:a.x,y:a.y-1,'font-size':'1.6',fill:'#4C6672','text-anchor':'middle'}); lbl.textContent=lon.toFixed(2)+'°E';
+    grat.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#A8BCC9','stroke-width':'0.08','stroke-dasharray':'0.6,0.9'}));
+    const lbl = svgEl('text',{x:a.x,y:a.y-1,'font-size':'1.6',fill:'#7A8E9C','text-anchor':'middle'}); lbl.textContent=lon.toFixed(2)+'°E';
     grat.appendChild(lbl);
   }
   for(let lat=Math.ceil(GEO_BOUNDS.latMin*4)/4; lat<=GEO_BOUNDS.latMax; lat+=0.25){
     const a=project(lat,GEO_BOUNDS.lonMin), b=project(lat,GEO_BOUNDS.lonMax);
-    grat.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#274552','stroke-width':'0.08','stroke-dasharray':'0.6,0.9'}));
-    const lbl = svgEl('text',{x:a.x+1.5,y:a.y+0.6,'font-size':'1.6',fill:'#4C6672'}); lbl.textContent=lat.toFixed(2)+'°N';
+    grat.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#A8BCC9','stroke-width':'0.08','stroke-dasharray':'0.6,0.9'}));
+    const lbl = svgEl('text',{x:a.x+1.5,y:a.y+0.6,'font-size':'1.6',fill:'#7A8E9C'}); lbl.textContent=lat.toFixed(2)+'°N';
     grat.appendChild(lbl);
   }
   groundSvg.appendChild(grat);
 
   // sea backdrop + coastline
-  groundSvg.appendChild(svgEl('polygon',{points:outlinePts, fill:'url(#landGrad)', stroke:'#12B5AC','stroke-width':'0.45','stroke-opacity':'0.8'}));
+  groundSvg.appendChild(svgEl('polygon',{points:outlinePts, fill:'url(#landGrad)', stroke:'#0A7C76','stroke-width':'0.45','stroke-opacity':'0.8'}));
 
   // sector demand-zone glow blobs (colored by dominant end-use sector, sized by demand) — drawn under nodes
   const zonesG = svgEl('g',{id:'zonesG'});
@@ -444,17 +450,17 @@ function buildGround(){
 
   // north arrow
   const na = svgEl('g',{id:'northArrow',transform:'translate(91,10)'});
-  na.innerHTML = '<polygon points="0,-4 2,3 0,1.3 -2,3" fill="#F4D9A8"/><text x="0" y="6.5" font-size="3" fill="#F4D9A8" text-anchor="middle">N</text>';
+  na.innerHTML = '<polygon points="0,-4 2,3 0,1.3 -2,3" fill="#8A6A1F"/><text x="0" y="6.5" font-size="3" fill="#8A6A1F" text-anchor="middle">N</text>';
   groundSvg.appendChild(na);
   // scale bar (~10 km, computed from the projection's real km-per-degree at this latitude)
   const kmPerDegLon = 111.32*Math.cos(25.3*Math.PI/180);
   const degFor10km = 10/kmPerDegLon;
   const barPx = degFor10km/(GEO_BOUNDS.lonMax-GEO_BOUNDS.lonMin)*88;
   const sb = svgEl('g',{id:'scaleBar',transform:'translate(6,157)'});
-  sb.innerHTML = `<line x1="0" y1="0" x2="${barPx.toFixed(2)}" y2="0" stroke="#B9C6CF" stroke-width="0.4"/>
-    <line x1="0" y1="-0.8" x2="0" y2="0.8" stroke="#B9C6CF" stroke-width="0.4"/>
-    <line x1="${barPx.toFixed(2)}" y1="-0.8" x2="${barPx.toFixed(2)}" y2="0.8" stroke="#B9C6CF" stroke-width="0.4"/>
-    <text x="${(barPx/2).toFixed(2)}" y="-1.3" font-size="2" fill="#B9C6CF" text-anchor="middle">10 km</text>`;
+  sb.innerHTML = `<line x1="0" y1="0" x2="${barPx.toFixed(2)}" y2="0" stroke="#3E5666" stroke-width="0.4"/>
+    <line x1="0" y1="-0.8" x2="0" y2="0.8" stroke="#3E5666" stroke-width="0.4"/>
+    <line x1="${barPx.toFixed(2)}" y1="-0.8" x2="${barPx.toFixed(2)}" y2="0.8" stroke="#3E5666" stroke-width="0.4"/>
+    <text x="${(barPx/2).toFixed(2)}" y="-1.3" font-size="2" fill="#3E5666" text-anchor="middle">10 km</text>`;
   groundSvg.appendChild(sb);
 }
 buildGround();
@@ -472,10 +478,10 @@ function drawZones(){
     let grad = groundSvg.querySelector('#'+grId);
     if(!grad){
       grad = svgEl('radialGradient',{id:grId});
-      grad.innerHTML = `<stop offset="0%" stop-color="${sectorColor[dom]}" stop-opacity="0.38"/><stop offset="100%" stop-color="${sectorColor[dom]}" stop-opacity="0"/>`;
+      grad.innerHTML = `<stop offset="0%" stop-color="${sectorColor[dom]}" stop-opacity="0.20"/><stop offset="100%" stop-color="${sectorColor[dom]}" stop-opacity="0"/>`;
       groundSvg.querySelector('defs').appendChild(grad);
     } else {
-      grad.innerHTML = `<stop offset="0%" stop-color="${sectorColor[dom]}" stop-opacity="0.38"/><stop offset="100%" stop-color="${sectorColor[dom]}" stop-opacity="0"/>`;
+      grad.innerHTML = `<stop offset="0%" stop-color="${sectorColor[dom]}" stop-opacity="0.20"/><stop offset="100%" stop-color="${sectorColor[dom]}" stop-opacity="0"/>`;
     }
     g.appendChild(svgEl('circle',{cx:d.x, cy:d.y, r:r, fill:`url(#${grId})`}));
   });
@@ -510,12 +516,12 @@ function drawShadows(){
   [...supplyAssets, ...reservoirSites].forEach(a=>{
     const cap = a.capacity!==undefined ? (a.current!==undefined? a.capacity : a.capacity) : 0;
     const r = 0.9 + 2.2*Math.sqrt((a.current!==undefined? a.capacity : a.capacity)/maxCap);
-    g.appendChild(svgEl('ellipse',{cx:a.x, cy:a.y+0.3, rx:r, ry:r*0.4, fill:'#000', 'fill-opacity':'0.45'}));
+    g.appendChild(svgEl('ellipse',{cx:a.x, cy:a.y+0.3, rx:r, ry:r*0.4, fill:'#1E3C5A', 'fill-opacity':'0.16'}));
   });
   demandNodes.forEach(d=>{
     const dem = demandNodeDemand(d);
     const r = 1.2 + 3.2*Math.sqrt(dem/900000);
-    g.appendChild(svgEl('ellipse',{cx:d.x, cy:d.y+0.3, rx:r, ry:r*0.42, fill:'#F4D9A8', 'fill-opacity':'0.10'}));
+    g.appendChild(svgEl('ellipse',{cx:d.x, cy:d.y+0.3, rx:r, ry:r*0.42, fill:'#8A6A1F', 'fill-opacity':'0.10'}));
   });
 }
 
@@ -609,9 +615,9 @@ function renderControls(){
         <div class="min-w-0"><p class="text-xs font-semibold truncate" style="color:${catColor[a.cat]}">${a.name}</p>
         <p class="text-[10px]" style="color:var(--dim)">${fmt(a.capacity)} m³/d · SEC ${a.sec} kWh/m³</p></div>
         <div class="flex gap-1 shrink-0">
-          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='on'?'#1E7A46':'#1a2830'};color:#fff" onclick="setAsset('${a.id}','on')">On</button>
-          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='partial'?'#F0A93B':'#1a2830'};color:#fff" onclick="setAsset('${a.id}','partial')">½</button>
-          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='off'?'#E14B4B':'#1a2830'};color:#fff" onclick="setAsset('${a.id}','off')">Off</button>
+          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='on'?'#1E7A46':'#DDE8F1'};color:${a.status==='on'?'#fff':'#51677A'}" onclick="setAsset('${a.id}','on')">On</button>
+          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='partial'?'#9A6309':'#DDE8F1'};color:${a.status==='partial'?'#fff':'#51677A'}" onclick="setAsset('${a.id}','partial')">½</button>
+          <button class="btn px-1.5 py-0.5 text-[10px] rounded" style="background:${a.status==='off'?'#C62F2F':'#DDE8F1'};color:${a.status==='off'?'#fff':'#51677A'}" onclick="setAsset('${a.id}','off')">Off</button>
         </div>
       </div></div>`;
   }
@@ -685,7 +691,7 @@ function sectorBarsHTML(sectors, total){
     const pct = total>0 ? (v/total*100) : 0;
     return `<div class="mb-1.5">
       <div class="flex justify-between text-[10.5px] mb-0.5"><span style="color:${sectorColor[k]}">${sectorLabel[k]}</span><span class="mono" style="color:var(--dim)">${fmt(v)} m³/d (${pct.toFixed(0)}%)</span></div>
-      <div style="background:#0A141B;border-radius:4px;height:5px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${sectorColor[k]}"></div></div>
+      <div style="background:#E8F0F7;border-radius:4px;height:5px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${sectorColor[k]}"></div></div>
     </div>`;
   }).join('');
 }
@@ -703,21 +709,21 @@ function showDetail(a){
   const served = demandsForSource(a.id);
   document.getElementById('detailPanel').innerHTML = `
     <p class="pill mb-2 inline-block" style="background:${catColor[a.cat]}22;color:${catColor[a.cat]}">${catLabel[a.cat]}</p>
-    <h3 class="text-base font-bold text-white mb-1">${a.name}</h3>
+    <h3 class="text-base font-bold mb-1">${a.name}</h3>
     <div class="grid grid-cols-2 gap-2 text-center my-2">
       <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">Active flow</p><p class="text-sm font-bold">${fmt(flow)} m³/d</p></div>
-      <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">Status</p><p class="text-sm font-bold" style="color:${a.status==='on'?'#3FBF6B':a.status==='partial'?'#F0A93B':'#E14B4B'}">${a.status.toUpperCase()}</p></div>
+      <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">Status</p><p class="text-sm font-bold" style="color:${a.status==='on'?'#197A3E':a.status==='partial'?'#9A6309':'#C62F2F'}">${a.status.toUpperCase()}</p></div>
       <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">Power draw</p><p class="text-sm font-bold" style="color:var(--teal)">${power} kW</p></div>
       <div class="card-hi p-2"><p class="text-[10px]" style="color:var(--dim)">LCOW</p><p class="text-sm font-bold">≈QR ${a.lcow}/m³</p></div>
     </div>
     <p class="text-xs mb-2" style="color:var(--dim)">${a.note}</p>
-    <p class="text-[11px] font-semibold mb-1" style="color:#F4D9A8">Feeds these demand points</p>
+    <p class="text-[11px] font-semibold mb-1" style="color:#8A6A1F">Feeds these demand points</p>
     ${served.length? served.map(d=>`<div class="text-[11px] py-0.5">→ ${d.name} <span class="mono" style="color:var(--dim)">(${sectorLabel[dominantSector(d)]})</span></div>`).join('') : '<p class="text-[11px]" style="color:var(--dim)">No direct link modeled.</p>'}`;
 }
 function showDetailReservoir(r){
   document.getElementById('detailPanel').innerHTML = `
     <p class="pill mb-2 inline-block" style="background:${catColor.res}22;color:${catColor.res}">Strategic Mega-Reservoir</p>
-    <h3 class="text-base font-bold text-white mb-1">${r.name}</h3>
+    <h3 class="text-base font-bold mb-1">${r.name}</h3>
     <div class="card-hi p-2 text-center my-2"><p class="text-[10px]" style="color:var(--dim)">Current volume</p><p class="text-sm font-bold">${fmt(r.current)} m³ / ${fmt(r.capacity)} m³</p></div>
     <p class="text-xs" style="color:var(--dim)">Phase-1 KAHRAMAA Water Security Mega Reservoirs site. Storage split evenly across the 5 sites (indicative — see Methodology). Feeds the network generally rather than a single demand point.</p>`;
 }
@@ -726,13 +732,13 @@ function showDetailDemand(d){
   const sectors = demandNodeSectors(d);
   const sources = sourcesForDemand(d.id);
   document.getElementById('detailPanel').innerHTML = `
-    <p class="pill mb-2 inline-block" style="background:#F4D9A822;color:#F4D9A8">Demand Point — ${d.name}</p>
+    <p class="pill mb-2 inline-block" style="background:#8A6A1F22;color:#8A6A1F">Demand Point — ${d.name}</p>
     <div class="card-hi p-2 text-center my-2"><p class="text-[10px]" style="color:var(--dim)">Total modeled demand</p><p class="text-sm font-bold">${fmt(dem)} m³/d</p></div>
-    <p class="text-[11px] font-semibold mb-1" style="color:#F4D9A8">End-use breakdown</p>
+    <p class="text-[11px] font-semibold mb-1" style="color:#8A6A1F">End-use breakdown</p>
     ${sectorBarsHTML(sectors, dem)}
-    <p class="text-[11px] font-semibold mt-2 mb-1" style="color:#F4D9A8">Supplied by</p>
+    <p class="text-[11px] font-semibold mt-2 mb-1" style="color:#8A6A1F">Supplied by</p>
     ${sourceListHTML(sources)}
-    <p class="text-[10px] mt-2" style="color:#5E727D">Population-weighted allocation of national domestic/landscape demand, plus indicative agriculture/industry loading where relevant. See Methodology.</p>`;
+    <p class="text-[10px] mt-2" style="color:#566B7C">Population-weighted allocation of national domestic/landscape demand, plus indicative agriculture/industry loading where relevant. See Methodology.</p>`;
 }
 
 /* ---- hover tooltips ---- */
@@ -753,28 +759,28 @@ function positionTooltip(e){
 function tooltipForSupply(a){
   const flow = assetFlow(a);
   return `<p class="pill mb-1 inline-block" style="background:${catColor[a.cat]}22;color:${catColor[a.cat]}">${catLabel[a.cat]}</p>
-    <p class="text-sm font-bold text-white">${a.name}</p>
+    <p class="text-sm font-bold">${a.name}</p>
     <p class="text-[11px] mono mt-1" style="color:var(--dim)">Capacity ${fmt(a.capacity)} m³/d</p>
-    <p class="text-[11px] mono" style="color:${flow>0?'#3FBF6B':'#E14B4B'}">Active flow ${fmt(flow)} m³/d · ${a.status.toUpperCase()}</p>
+    <p class="text-[11px] mono" style="color:${flow>0?'#197A3E':'#C62F2F'}">Active flow ${fmt(flow)} m³/d · ${a.status.toUpperCase()}</p>
     <p class="text-[11px] mono" style="color:var(--dim)">SEC ${a.sec} kWh/m³ · LCOW QR${a.lcow}/m³</p>
-    <p class="text-[10px] mt-1" style="color:#5E727D">Click for full detail &amp; served demand points →</p>`;
+    <p class="text-[10px] mt-1" style="color:#566B7C">Click for full detail &amp; served demand points →</p>`;
 }
 function tooltipForReservoir(r){
   return `<p class="pill mb-1 inline-block" style="background:${catColor.res}22;color:${catColor.res}">Strategic Reservoir</p>
-    <p class="text-sm font-bold text-white">${r.name}</p>
+    <p class="text-sm font-bold">${r.name}</p>
     <p class="text-[11px] mono mt-1" style="color:var(--dim)">${fmt(r.current)} / ${fmt(r.capacity)} m³</p>
-    <p class="text-[10px] mt-1" style="color:#5E727D">Click for full detail →</p>`;
+    <p class="text-[10px] mt-1" style="color:#566B7C">Click for full detail →</p>`;
 }
 function tooltipForDemand(d){
   const dem = demandNodeDemand(d);
   const sectors = demandNodeSectors(d);
   const sources = sourcesForDemand(d.id);
-  return `<p class="pill mb-1 inline-block" style="background:#F4D9A822;color:#F4D9A8">Demand Point</p>
-    <p class="text-sm font-bold text-white">${d.name}</p>
+  return `<p class="pill mb-1 inline-block" style="background:#8A6A1F22;color:#8A6A1F">Demand Point</p>
+    <p class="text-sm font-bold">${d.name}</p>
     <p class="text-[11px] mono mt-1" style="color:var(--dim)">${fmt(dem)} m³/d total</p>
     ${sectorBarsHTML(sectors, dem)}
-    <p class="text-[10px] mt-1" style="color:#F4D9A8">Sourced from ${sources.length} link${sources.length===1?'':'s'}: ${sources.map(a=>a.name).join(', ')||'—'}</p>
-    <p class="text-[10px] mt-1" style="color:#5E727D">Click for full breakdown →</p>`;
+    <p class="text-[10px] mt-1" style="color:#8A6A1F">Sourced from ${sources.length} link${sources.length===1?'':'s'}: ${sources.map(a=>a.name).join(', ')||'—'}</p>
+    <p class="text-[10px] mt-1" style="color:#566B7C">Click for full breakdown →</p>`;
 }
 // override click handler for reservoirs specifically
 nodeLayer.addEventListener('click', ()=>{});
@@ -792,11 +798,11 @@ function renderKPIsAndPanels(){
   document.getElementById('tickerSupply').textContent = fmt(sup)+' m³/d';
   document.getElementById('tickerDemand').textContent = fmt(dem)+' m³/d';
   document.getElementById('tickerBalance').textContent = (bal>=0?'+':'')+fmt(bal)+' m³/d';
-  document.getElementById('tickerBalance').style.color = bal>=0? '#3FBF6B':'#E14B4B';
+  document.getElementById('tickerBalance').style.color = bal>=0? '#197A3E':'#C62F2F';
   document.getElementById('tickerStorage').textContent = fmt(storage)+' m³';
 
   document.getElementById('eqBalanceVal').textContent = (bal>=0?'+':'')+fmt(bal)+' m³/day';
-  document.getElementById('eqBalanceVal').style.color = bal>=0?'#3FBF6B':'#E14B4B';
+  document.getElementById('eqBalanceVal').style.color = bal>=0?'#197A3E':'#C62F2F';
   document.getElementById('valDays').textContent = days+' d';
   document.getElementById('valUnmet').textContent = unmet>0? fmt(unmet)+' m³/d' : 'None';
 
@@ -812,7 +818,7 @@ function renderKPIsAndPanels(){
    ========================================================================== */
 function renderCrisisButtons(){
   document.getElementById('crisisButtons').innerHTML = crisisScenarios.map(s=>`
-    <button class="btn w-full text-white py-2 px-3 rounded-lg text-sm font-medium text-left" style="background:#3a1420" onclick="fireCrisis('${s.id}')">${s.label}</button>
+    <button class="btn w-full py-2 px-3 rounded-lg text-sm font-medium text-left" style="background:#F7DDE4;color:#7A1436;border:1px solid #E9C2CE" onclick="fireCrisis('${s.id}')">${s.label}</button>
   `).join('');
 }
 function fireCrisis(id){
@@ -845,15 +851,15 @@ function renderAltList(){
   document.getElementById('altList').innerHTML = ranked.map(a=>`
     <div class="card-hi p-3 flex items-center gap-3">
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-bold">${a.name} ${activeAlts[a.id]?'<span style=\"color:#3FBF6B\">✓ deployed</span>':''}</p>
+        <p class="text-sm font-bold">${a.name} ${activeAlts[a.id]?'<span style=\"color:#197A3E\">✓ deployed</span>':''}</p>
         <p class="text-xs" style="color:var(--dim)">${a.desc}</p>
         <div class="flex flex-wrap gap-3 mt-1 text-[11px] mono">
           <span style="color:var(--teal)">+${fmt(a.gain)} m³/d</span>
-          <span style="color:#F0A93B">QR ${a.costLo}${a.costHi!==a.costLo?'–'+a.costHi:''}/m³</span>
-          <span style="color:#9B6BFF">${a.timeLabel}</span>
+          <span style="color:#9A6309">QR ${a.costLo}${a.costHi!==a.costLo?'–'+a.costHi:''}/m³</span>
+          <span style="color:#7343D6">${a.timeLabel}</span>
         </div>
       </div>
-      <button class="btn px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0" style="background:${activeAlts[a.id]?'#1a2830':'#12B5AC'};color:${activeAlts[a.id]?'#B9E7E2':'#062421'}" onclick="toggleAlt('${a.id}')">${activeAlts[a.id]?'Undo':'Deploy'}</button>
+      <button class="btn px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0" style="background:${activeAlts[a.id]?'#DDE8F1':'#0A7C76'};color:${activeAlts[a.id]?'#0A5E59':'#FFFFFF'}" onclick="toggleAlt('${a.id}')">${activeAlts[a.id]?'Undo':'Deploy'}</button>
     </div>`).join('');
 }
 function toggleAlt(id){ activeAlts[id]=!activeAlts[id]; renderAltList(); }
@@ -870,16 +876,16 @@ const riskItems = [
   {name:'Public Non-Compliance w/ Tarsheed', freq:2, amp:1, share:3},
 ];
 function drawHeatmap(){
-  const qcolors={'1-1':'#123a2c','1-2':'#3a3312','1-3':'#3a1414','2-1':'#3a3312','2-2':'#3a2a12','2-3':'#3a1a14','3-1':'#3a1414','3-2':'#3a1a14','3-3':'#4a1414'};
+  const qcolors={'1-1':'#D8F0E2','1-2':'#FBF0D0','1-3':'#FADCDC','2-1':'#FBF0D0','2-2':'#FAE6C8','2-3':'#FADDD0','3-1':'#FADCDC','3-2':'#FADDD0','3-3':'#F7CACA'};
   const shapes=[];
   for(let f=1; f<=3; f++){ for(let a=1;a<=3;a++){ shapes.push({type:'rect',x0:a-0.5,y0:f-0.5,x1:a+0.5,y1:f+0.5,fillcolor:qcolors[f+'-'+a],line:{width:0},layer:'below'}); }}
   const data=[{ x:riskItems.map(r=>r.amp), y:riskItems.map(r=>r.freq), mode:'markers+text', type:'scatter',
-    text:riskItems.map(r=>r.name), textposition:'top center', textfont:{size:10,color:'#EAF1F5'},
-    marker:{ size:riskItems.map(r=>20+r.share*3), color:riskItems.map(r=>['#3FBF6B','#F0A93B','#E14B4B'][r.amp-1]), opacity:.85, line:{color:'#000a',width:1} },
+    text:riskItems.map(r=>r.name), textposition:'top center', textfont:{size:10,color:'#0E1C26'},
+    marker:{ size:riskItems.map(r=>20+r.share*3), color:riskItems.map(r=>['#197A3E','#9A6309','#C62F2F'][r.amp-1]), opacity:.85, line:{color:'#7A8E9CAA',width:1} },
     hovertext:riskItems.map(r=>`${r.name}<br>~${r.share}% of demand exposed`), hoverinfo:'text' }];
   const layout={ margin:{l:55,r:20,t:10,b:45}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-    font:{color:'#B9C6CF'}, xaxis:{title:'Amplitude',tickvals:[1,2,3],ticktext:['Low','Med','High'],range:[.5,3.5],gridcolor:'#1E2E38'},
-    yaxis:{title:'Frequency',tickvals:[1,2,3],ticktext:['Low','Med','High'],range:[.5,3.5],gridcolor:'#1E2E38'}, shapes };
+    font:{color:'#3E5666'}, xaxis:{title:'Amplitude',tickvals:[1,2,3],ticktext:['Low','Med','High'],range:[.5,3.5],gridcolor:'#C3D6E4'},
+    yaxis:{title:'Frequency',tickvals:[1,2,3],ticktext:['Low','Med','High'],range:[.5,3.5],gridcolor:'#C3D6E4'}, shapes };
   Plotly.newPlot('heatmap', data, layout, {displayModeBar:false, responsive:true});
 }
 
@@ -901,9 +907,9 @@ document.querySelectorAll('.tab-btn').forEach(b=>{
    STATIC POLICY CONTENT
    ========================================================================== */
 document.getElementById('qnv-pillars').innerHTML = [
-  {t:'Human Development',d:'Public health depends on secure, high-quality water supply.',c:'#12B5AC'},
-  {t:'Social Development',d:'Equitable water access across all municipalities.',c:'#3FBF6B'},
-  {t:'Economic Development',d:'Water security underpins agriculture, industry &amp; tourism.',c:'#E0A030'},
+  {t:'Human Development',d:'Public health depends on secure, high-quality water supply.',c:'#0A7C76'},
+  {t:'Social Development',d:'Equitable water access across all municipalities.',c:'#197A3E'},
+  {t:'Economic Development',d:'Water security underpins agriculture, industry &amp; tourism.',c:'#8F6209'},
   {t:'Environmental Development',d:'Balancing development with groundwater &amp; resource protection.',c:'#9B1B45'},
 ].map(p=>`<div class="card-hi p-3" style="border-color:${p.c}55"><p class="text-sm font-bold" style="color:${p.c}">${p.t}</p><p class="text-xs mt-1" style="color:var(--dim)">${p.d}</p></div>`).join('');
 
@@ -914,7 +920,7 @@ document.getElementById('nds3-targets').innerHTML = [
   {t:'Per-capita Water Use', v:'<310 L/day by 2030', s:'from ≈450 L/day today'},
   {t:'Protected Land & Marine Area', v:'30% by 2030', s:'ecosystem & watershed protection'},
   {t:'Habitat Restoration', v:'30% by 2030', s:'supports natural water-cycle resilience'},
-].map(x=>`<div class="card-hi p-3"><p class="text-xs font-semibold" style="color:var(--dim)">${x.t}</p><p class="text-base font-extrabold" style="color:#F4D9A8">${x.v}</p><p class="text-[11px] mt-0.5" style="color:#5E727D">${x.s}</p></div>`).join('');
+].map(x=>`<div class="card-hi p-3"><p class="text-xs font-semibold" style="color:var(--dim)">${x.t}</p><p class="text-base font-extrabold" style="color:#8A6A1F">${x.v}</p><p class="text-[11px] mt-0.5" style="color:#566B7C">${x.s}</p></div>`).join('');
 
 document.getElementById('targets-table').innerHTML = [
   ['Per-capita domestic water use','≈450 L/day','&lt;310 L/day','NDS-3 (2024–2030)'],
@@ -925,7 +931,7 @@ document.getElementById('targets-table').innerHTML = [
   ['Desalination capacity','538 MIGD (2024) / ≈540 MIGD max (2026)','638 MIGD by 2028','KAHRAMAA (RAF Facility E)'],
   ['Renewable capacity','≈875 MW','4 GW by 2030','QNRES 2024'],
   ['GHG emissions','Baseline','−25% by 2030 vs. 2019 BAU','Qatar NDC (2021) / NDS-3'],
-].map(r=>`<tr><td class="font-medium">${r[0]}</td><td>${r[1]}</td><td class="font-semibold" style="color:#F4D9A8">${r[2]}</td><td style="color:#5E727D">${r[3]}</td></tr>`).join('');
+].map(r=>`<tr><td class="font-medium">${r[0]}</td><td>${r[1]}</td><td class="font-semibold" style="color:#8A6A1F">${r[2]}</td><td style="color:#566B7C">${r[3]}</td></tr>`).join('');
 
 /* ==========================================================================
    MASTER RENDER + INIT
