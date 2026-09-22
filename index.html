@@ -41,18 +41,23 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
 .frac>span{display:block;padding:0 4px;}
 .frac>span:first-child{border-bottom:1px solid #0A5E59;}
 
-/* ---- 3D BOARD ---- */
-.board-outer{perspective:1400px;}
-.board-3d{position:relative;width:100%;aspect-ratio:100/162;transform-style:preserve-3d;transform:rotateX(var(--tilt,52deg)) rotateZ(var(--az,-2deg));transition:transform .2s ease;cursor:grab;}
-.board-3d:active{cursor:grabbing;}
+/* ---- MAP BOARD (flat, top-down) ---- */
+.board-outer{position:relative;}
+.board-3d{position:relative;width:100%;aspect-ratio:100/162;}
 .board-ground{position:absolute;inset:0;}
-.board-ground svg{width:100%;height:100%;display:block;filter:drop-shadow(0 26px 34px rgba(30,60,90,.28));}
-.node-wrap{position:absolute;transform-style:preserve-3d;}
-.node-badge{position:absolute;left:0;top:0;transform-origin:center bottom;cursor:pointer;white-space:nowrap;
+.board-ground svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 20px rgba(30,60,90,.16));}
+.node-wrap{position:absolute;}
+/* the badge box is the dot alone, centred on the node's coordinate; the label
+   is taken out of flow so it hangs below without shifting the dot off-point */
+.node-badge{position:absolute;left:0;top:0;transform:translate(-50%,-50%);cursor:pointer;white-space:nowrap;
   display:flex;flex-direction:column;align-items:center;transition:filter .15s ease;}
-.node-badge:hover{filter:brightness(.88) saturate(1.15);}
-.node-dot{border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 4px 10px rgba(20,50,75,.38);}
-.node-label{margin-top:3px;font-size:8.5px;font-weight:700;color:#12222E;background:rgba(255,255,255,.88);border:1px solid rgba(120,150,170,.35);padding:1px 5px;border-radius:6px;white-space:nowrap;pointer-events:none;}
+.node-badge:hover{filter:brightness(.88) saturate(1.15);z-index:30;}
+.node-dot{border-radius:50%;box-shadow:0 0 0 2.5px rgba(255,255,255,.92), 0 2px 6px rgba(20,50,75,.35);}
+.node-label{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;
+  font-size:8.5px;font-weight:700;color:#12222E;background:rgba(255,255,255,.88);border:1px solid rgba(120,150,170,.35);padding:1px 5px;border-radius:6px;white-space:nowrap;pointer-events:none;}
+/* plants sit right on top of the cities they feed, so supply labels go above
+   the dot and demand labels below — that alone clears most of the collisions */
+.node-badge.label-above .node-label{top:auto;bottom:100%;margin:0 0 4px;}
 .node-offline .node-dot{background:#9AAAB5 !important;box-shadow:0 0 0 3px rgba(198,47,47,.4);animation:pulseOff 1.2s infinite;}
 @keyframes pulseOff{0%,100%{opacity:1;}50%{opacity:.4;}}
 .demand-city{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
@@ -128,12 +133,11 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
 .display-mode #view-network > .grid > section{
   height:100%; display:flex; flex-direction:column; margin:0;
 }
-/* the board is tilted ~52°, so its painted height is only ~62% of the element.
-   Oversize it and clip, otherwise the map floats in a sea of dead space. */
+/* flat map: the element's box is the painted map, so height:100% fits exactly */
 .display-mode .board-outer{
-  flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center;
 }
-.display-mode .board-3d{ height:142%; width:auto; aspect-ratio:100/162; }
+.display-mode .board-3d{ height:100%; width:auto; aspect-ratio:100/162; }
 
 /* an unattended screen carries no "hover for details" instructions */
 .display-mode .src-note{ display:none; }
@@ -379,13 +383,8 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
         <p class="src-note mt-2">Explore conservation (Tarsheed-style) vs. growth / extreme-heat surge scenarios.</p>
       </div>
       <div class="card p-3">
-        <h2 class="section-title mb-2">Board Controls</h2>
-        <label class="text-xs" style="color:var(--dim)">Tilt</label>
-        <input id="tiltSlider" type="range" min="28" max="66" value="52" class="w-full">
-        <label class="text-xs" style="color:var(--dim)">Rotate (drag the board, or use slider)</label>
-        <input id="azSlider" type="range" min="-180" max="180" value="-2" class="w-full">
-        <button id="btnOrbit" class="btn w-full mt-1 py-1.5 px-3 rounded-lg text-xs font-medium border" style="border-color:var(--line)">▶ Auto-orbit</button>
-        <div class="flex flex-wrap gap-1.5 mt-2" id="legendChips"></div>
+        <h2 class="section-title mb-2">Map Legend</h2>
+        <div class="flex flex-wrap gap-1.5" id="legendChips"></div>
       </div>
     </aside>
 
@@ -393,7 +392,7 @@ table.mth td, table.mth th{padding:6px 10px;border-bottom:1px solid var(--line);
     <section class="card p-3 relative overflow-hidden">
       <div class="flex items-center justify-between mb-2 px-1">
         <h2 class="section-title">Live Supply → Demand Network</h2>
-        <span class="src-note">Tower height ∝ active capacity · line thickness ∝ flow · dot color = end-use sector · hover for details, click to pin, drag board to rotate</span>
+        <span class="src-note">Marker size ∝ capacity · line thickness ∝ flow · dot color = source type or end-use sector · hover for details, click for the full breakdown</span>
       </div>
       <div class="board-outer">
         <div class="board-3d" id="board3d">
@@ -763,19 +762,20 @@ function drawLinks(){
   });
 }
 
-function drawShadows(){
+/* Flat map: the old squashed ellipses read as 3D cast shadows, so they become
+   round footprints centred on each node — same magnitude cue, top-down. */
+function drawFootprints(){
   const g = document.getElementById('shadowG');
   g.innerHTML='';
   const maxCap = Math.max(...supplyAssets.map(a=>a.capacity));
   [...supplyAssets, ...reservoirSites].forEach(a=>{
-    const cap = a.capacity!==undefined ? (a.current!==undefined? a.capacity : a.capacity) : 0;
-    const r = 0.9 + 2.2*Math.sqrt((a.current!==undefined? a.capacity : a.capacity)/maxCap);
-    g.appendChild(svgEl('ellipse',{cx:a.x, cy:a.y+0.3, rx:r, ry:r*0.4, fill:'#1E3C5A', 'fill-opacity':'0.16'}));
+    const r = 1.1 + 2.6*Math.sqrt(a.capacity/maxCap);
+    g.appendChild(svgEl('circle',{cx:a.x, cy:a.y, r:r, fill:'#1E3C5A', 'fill-opacity':'0.10'}));
   });
   demandNodes.forEach(d=>{
     const dem = demandNodeDemand(d);
-    const r = 1.2 + 3.2*Math.sqrt(dem/900000);
-    g.appendChild(svgEl('ellipse',{cx:d.x, cy:d.y+0.3, rx:r, ry:r*0.42, fill:'#8A6A1F', 'fill-opacity':'0.10'}));
+    const r = 1.4 + 3.4*Math.sqrt(dem/900000);
+    g.appendChild(svgEl('circle',{cx:d.x, cy:d.y, r:r, fill:'#8A6A1F', 'fill-opacity':'0.09'}));
   });
 }
 
@@ -805,20 +805,21 @@ function dominantSector(d){
 function sourcesForDemand(id){ return directLinks.filter(([f,t])=>t===id).map(([f])=>supplyAssets.find(a=>a.id===f)).filter(Boolean); }
 function demandsForSource(id){ return directLinks.filter(([f,t])=>f===id).map(([,t])=>demandNodes.find(d=>d.id===t)).filter(Boolean); }
 
-let tiltDeg = 52;
+/* Flat top-down map. Capacity used to be carried twice — by tower height and
+   by dot size — so with the towers gone the size scale does the whole job and
+   is widened (and square-rooted, so area rather than diameter tracks capacity). */
 function buildNodes(){
   nodeLayer.innerHTML='';
   const maxCap = Math.max(...supplyAssets.map(a=>a.capacity));
   const maxRes = Math.max(...reservoirSites.map(r=>r.capacity));
   const maxDem = Math.max(...demandNodes.map(d=>demandNodeDemand(d)));
 
-  function place(a, heightPx, sizePx, color, shapeRound, extraClass, onClick){
+  function place(a, sizePx, color, shapeRound, extraClass, onClick){
     const wrap = document.createElement('div');
     wrap.className='node-wrap';
     wrap.style.left=a.x+'%'; wrap.style.top=(a.y/162*100)+'%';
     const badge = document.createElement('div');
-    badge.className='node-badge '+(extraClass||'');
-    badge.style.transform = `translate(-50%,-100%) rotateX(${-tiltDeg}deg) translateZ(${heightPx}px)`;
+    badge.className='node-badge label-above '+(extraClass||'');
     badge.innerHTML = `<div class="node-dot" style="width:${sizePx}px;height:${sizePx}px;background:${color};${shapeRound?'':'border-radius:4px;'}"></div><span class="node-label">${a.name}</span>`;
     badge.addEventListener('click',(e)=>{ e.stopPropagation(); onClick(a); });
     if(a.cat) attachHover(badge, ()=>tooltipForSupply(a)); else attachHover(badge, ()=>tooltipForReservoir(a));
@@ -828,14 +829,12 @@ function buildNodes(){
 
   supplyAssets.forEach(a=>{
     const flow = assetFlow(a);
-    const h = 14 + 90*(a.capacity/maxCap);
-    const size = 10 + 10*(a.capacity/maxCap);
-    place(a, h, size, catColor[a.cat], true, flow===0?'node-offline':(a.status==='partial'?'':''), showDetail);
+    const size = 9 + 17*Math.sqrt(a.capacity/maxCap);
+    place(a, size, catColor[a.cat], true, flow===0?'node-offline':'', showDetail);
   });
   reservoirSites.forEach(r=>{
-    const h = 10 + 60*(r.current/maxRes);
-    const size = 12;
-    place(r, h, size, catColor.res, false, '', showDetailReservoir);
+    const size = 10 + 8*Math.sqrt(r.current/maxRes);
+    place(r, size, catColor.res, false, '', showDetailReservoir);
   });
   demandNodes.forEach(d=>{
     const dem = demandNodeDemand(d);
@@ -845,7 +844,6 @@ function buildNodes(){
     badge.className='node-badge';
     badge.style.left=d.x+'%'; badge.style.top=(d.y/162*100)+'%';
     badge.style.position='absolute';
-    badge.style.transform = `translate(-50%,-100%) rotateX(${-tiltDeg}deg) translateZ(${18+size}px)`;
     badge.innerHTML = `<div class="node-dot" style="width:${size*0.7}px;height:${size*0.7}px;background:${sectorColor[dom]};border:2px solid #0009;"></div><span class="node-label">${d.name}</span>`;
     badge.addEventListener('click',(e)=>{ e.stopPropagation(); showDetailDemand(d); });
     attachHover(badge, ()=>tooltipForDemand(d));
@@ -854,7 +852,7 @@ function buildNodes(){
 }
 
 function refreshBoard(){
-  drawZones(); drawLinks(); drawShadows(); buildNodesFiltered();
+  drawZones(); drawLinks(); drawFootprints(); buildNodesFiltered();
 }
 
 /* ==========================================================================
@@ -886,27 +884,8 @@ document.getElementById('demandSlider').addEventListener('input', function(){
   document.getElementById('demandPct').textContent = this.value+'%';
   renderAll();
 });
-document.getElementById('tiltSlider').addEventListener('input', function(){
-  tiltDeg = Number(this.value);
-  document.getElementById('board3d').style.setProperty('--tilt', tiltDeg+'deg');
-  buildNodesFiltered();
-});
-
-let azDeg = -2, orbiting = false, orbitRAF = null, dragging = false, dragStartX = 0, dragStartAz = -2;
-const board3dEl = document.getElementById('board3d');
-function setAz(v){ azDeg = v; board3dEl.style.setProperty('--az', azDeg+'deg'); document.getElementById('azSlider').value = azDeg; }
-document.getElementById('azSlider').addEventListener('input', function(){ stopOrbit(); setAz(Number(this.value)); });
-board3dEl.addEventListener('pointerdown', (e)=>{ dragging=true; dragStartX=e.clientX; dragStartAz=azDeg; stopOrbit(); board3dEl.setPointerCapture(e.pointerId); });
-board3dEl.addEventListener('pointermove', (e)=>{ if(!dragging) return; const delta=(e.clientX-dragStartX)*0.4; setAz(Math.max(-180,Math.min(180, dragStartAz+delta))); });
-board3dEl.addEventListener('pointerup', ()=>{ dragging=false; });
-board3dEl.addEventListener('pointerleave', ()=>{ dragging=false; });
-function stepOrbit(){ setAz(((azDeg+0.15+180)%360)-180); orbitRAF = requestAnimationFrame(stepOrbit); }
-function stopOrbit(){ orbiting=false; document.getElementById('btnOrbit').textContent='▶ Auto-orbit'; if(orbitRAF) cancelAnimationFrame(orbitRAF); }
-document.getElementById('btnOrbit').addEventListener('click', ()=>{
-  orbiting = !orbiting;
-  document.getElementById('btnOrbit').textContent = orbiting? '⏸ Stop orbit' : '▶ Auto-orbit';
-  if(orbiting) stepOrbit(); else stopOrbit();
-});
+/* Tilt / rotate / auto-orbit removed with the 3D board — the map is flat and
+   north-up, so there is no camera to control. */
 
 const legendCats = [
   {id:'desal', label:'Desalination'}, {id:'gw', label:'Groundwater (well field)'}, {id:'tse', label:'TSE Reuse'}, {id:'res', label:'Reservoirs'}
@@ -1191,7 +1170,7 @@ document.getElementById('targets-table').innerHTML = [
    MASTER RENDER + INIT
    ========================================================================== */
 function renderAll(){
-  renderControls(); renderKPIsAndPanels(); drawZones(); buildNodesFiltered(); drawLinks(); drawShadows();
+  renderControls(); renderKPIsAndPanels(); drawZones(); buildNodesFiltered(); drawLinks(); drawFootprints();
   if(document.getElementById('view-crisis').classList.contains('active')) renderAltList();
 }
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -1343,22 +1322,27 @@ window.addEventListener('resize', ()=>{ buildNodesFiltered(); if(document.getEle
     s.value = pct;
     s.dispatchEvent(new Event('input', {bubbles:true}));
   };
+  /* the legend doubles as a layer filter — the walk-through uses it to isolate
+     one source type, now that there is no orbiting camera to carry a beat */
+  const showLayers = cats =>{
+    Object.keys(legendVisible).forEach(k=>{ legendVisible[k] = !cats || cats.indexOf(k) >= 0; });
+    document.querySelectorAll('.legend-chip').forEach(chip=>{
+      chip.classList.toggle('off', !legendVisible[chip.dataset.cat]);
+    });
+    buildNodesFiltered();
+  };
   const resetAll = ()=>{
     stopSweep();
     supplyAssets.forEach(a=>a.status='on');
     reservoirSites.forEach(r=>r.current=r.capacity);
     alternatives.forEach(a=>activeAlts[a.id]=false);
     setDemand(100);
+    showLayers(null);
     renderAll();
   };
   const setCat = (cat, status)=>{
     supplyAssets.filter(a=>a.cat===cat).forEach(a=>a.status=status);
     renderAll();
-  };
-  /* `orbiting` is the app's own flag — read it rather than sniffing button text */
-  const orbit = on =>{
-    const b = $('btnOrbit');
-    if(b && !!on !== !!orbiting) b.click();
   };
 
   /* value sweep, so a number visibly moves on a public screen */
@@ -1381,24 +1365,24 @@ window.addEventListener('resize', ()=>{ buildNodesFiltered(); if(document.getEle
   /* ---------- the walk-through ---------- */
   const steps = [
     { view:'network', title:'The national water network',
-      text:'Every desalination plant, well field, reuse works and strategic reservoir in one model — tower height is active capacity, line thickness is flow, dot colour is the end-use sector.',
-      apply:()=>{ resetAll(); orbit(true); } },
+      text:'Every desalination plant, well field, reuse works and strategic reservoir in one model — marker size is capacity, line thickness is flow, dot colour is the source type or end-use sector.',
+      apply:()=>{ resetAll(); } },
 
-    { view:'network', title:'Supply meets demand',
-      text:'Qatar runs roughly a 35% reserve margin over average national demand. The balance below updates as every element of the network changes.',
-      apply:()=>{ resetAll(); orbit(true); } },
+    { view:'network', title:'Desalination carries the load',
+      text:'Isolating the coastal plants shows how concentrated national supply is: seawater desalination provides the overwhelming majority, which is what makes both energy demand and single-plant outages matter so much.',
+      apply:()=>{ resetAll(); showLayers(['desal']); } },
 
     { view:'network', title:'An extreme-heat demand surge',
       text:'Summer peaks push national demand up sharply. Watch the balance narrow and storage autonomy fall as demand climbs to 125% of baseline.',
-      apply:()=>{ resetAll(); orbit(true); sweepDemand(100,125); } },
+      apply:()=>{ resetAll(); sweepDemand(100,125); } },
 
     { view:'network', title:'Conservation as a supply source',
       text:'Tarsheed-style demand reduction toward the NDS-3 target of under 310 L per person per day buys the same headroom as new capacity — at a fraction of the energy and cost.',
-      apply:()=>{ resetAll(); orbit(true); sweepDemand(100,78); } },
+      apply:()=>{ resetAll(); sweepDemand(100,78); } },
 
     { view:'network', title:'Cutting groundwater extraction',
       text:'NDS-3 commits to a 70% cut in groundwater extraction by 2030. Taking the well fields offline shows how much that shifts onto desalination and reuse.',
-      apply:()=>{ resetAll(); orbit(true); setCat('gw','off'); } },
+      apply:()=>{ resetAll(); setCat('gw','off'); } },
 
     /* A single plant failure is absorbed by Qatar's ~35% reserve margin — no
        deficit appears. Compounding a grid outage with a heat surge is what
@@ -1510,7 +1494,6 @@ window.addEventListener('resize', ()=>{ buildNodesFiltered(); if(document.getEle
     if(timer){ clearInterval(timer); timer = null; }
     playing = false;
     stopSweep();
-    orbit(false);
     body.classList.remove('display-mode','stage-risk');
     hud.setAttribute('aria-hidden','true');
     rail.setAttribute('aria-hidden','true');
